@@ -1,44 +1,23 @@
 import sys
 import os
-import sys
-import re
-import json
-from typing import Optional
-import socket
 from datetime import datetime
 import pytz
 import numpy as np
 import pandas as pd
-import scipy.stats
-from matplotlib import pyplot as plt
-import seaborn as sns
-from io import BytesIO
-import itertools
-import math
-import tarfile
-from scipy.ndimage import find_objects
-from scipy.ndimage import label
-from scipy.stats import sem, ttest_ind_from_stats
-from scipy import stats
-from skimage.morphology import square, binary_erosion, binary_dilation
-from skimage.morphology import remove_small_objects
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-import skimage as sk
-import zipfile
-import tifffile
+from scipy.stats import ttest_ind_from_stats
+from occident.utils import load_deepcell_object, mean_confidence_interval, estimate_se
+from occident.tracking import (
+    process_all_frames,
+    get_group_from_filename
+)
 
 pd.set_option('display.max_rows', 50)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
-sys.path.append(os.path.expanduser('~/Occident-Paper'))
-from Figure_4.cell_tracking_helper_functions import(
-    load_data_local,
-    process_all_frames,
-    get_group_from_filename,
-    mean_confidence_interval,
-    estimate_se,
+sys.path.append(os.path.expanduser('.'))
+from cell_tracking_helper_functions import(
+    make_cancer_cell_barplots,
     plot_t_cell_segmentation_morphology_metrics,
     plot_individual_t_cell_segmentation_morphology_metrics,
     plot_individual_and_clumped_cancer_cell_segmentation_morphology_metrics,
@@ -46,7 +25,6 @@ from Figure_4.cell_tracking_helper_functions import(
     plot_cell_area_sum_with_ci,
     plot_individual_and_clumped_cancer_cell_area_ratio,
     plot_cancer_cell_segmentation_morphology_metrics,
-    make_cancer_cell_barplots,
     run_linear_regression_tests_nontracking_data,
     calculate_ratio_and_error
 )
@@ -59,19 +37,19 @@ def cell_segmentation_morphology(
         individual_colors,
 ):
     task_timestamp = datetime.now(pytz.utc).astimezone(pytz.timezone('US/Pacific')).strftime('%Y-%m-%d_%H:%M:%S')
-    base_save_single_cancer_barplots_filename = '~/Occident-Paper/plots/{metric}_single_cancer_cell_morphology_over_time_barplot_{task_timestamp}.pdf'
-    base_save_clumped_cancer_barplots_filename = '~/Occident-Paper/plots/{metric}_clumped_cancer_cell_morphology_over_time_barplot_{task_timestamp}.pdf'
-    base_all_and_attached_t_cell_morphology_over_time_filename = '~/Occident-Paper/plots/{metric}_{group}_all_and_attached_t_cell_morphology_over_time_{task_timestamp}.pdf'
-    base_attached_t_cell_morphology_over_time_filename = '~/Occident-Paper/plots/{metric}_attached_t_cell_morphology_over_time_{task_timestamp}.pdf'
-    base_all_t_cell_morphology_over_time_filename = '~/Occident-Paper/plots/{metric}_all_t_cell_morphology_over_time_{task_timestamp}.pdf'
-    base_single_and_clumped_cancer_cell_morphology_over_time_filename = '~/Occident-Paper/plots/{metric}_{group}_single_and_clumped_cancer_cell_morphology_over_time_{task_timestamp}.pdf'
-    base_single_cancer_cell_morphology_over_time_filename = '~/Occident-Paper/plots/{metric}_single_cancer_cell_morphology_over_time_{task_timestamp}.pdf'
-    base_clumped_cancer_cell_morphology_over_time_filename = '~/Occident-Paper/plots/{metric}_clumped_cancer_cell_morphology_over_time_{task_timestamp}.pdf'
-    base_single_cancer_cell_morphology_over_time_table_filename = '~/Occident-Paper/tables/{metric}_single_cancer_cell_morphology_over_time_{task_timestamp}.csv'
-    base_clumped_cancer_cell_morphology_over_time_table_filename = '~/Occident-Paper/tables/{metric}_clumped_cancer_cell_morphology_over_time_{task_timestamp}.csv'
-    base_cancer_cell_morphology_over_time_filename = '~/Occident-Paper/plots/{metric}_cancer_cell_morphology_over_time_{task_timestamp}.pdf'
-    base_cancer_individual_clumped_area_ratio_over_time_filename = '~/Occident-Paper/plots/single_and_clumped_cancer_cell_area_ratio_over_time_{task_timestamp}.pdf'
-    base_clumped_cancer_cell_morphology_sum_over_time_filename = "~/Occident-Paper/plots/cell_area_sum_clumped_cancer_cell_morphology_over_time_{task_timestamp}.pdf"
+    base_save_single_cancer_barplots_filename = './plots/{metric}_single_cancer_cell_morphology_over_time_barplot_{task_timestamp}.pdf'
+    base_save_clumped_cancer_barplots_filename = './plots/{metric}_clumped_cancer_cell_morphology_over_time_barplot_{task_timestamp}.pdf'
+    base_all_and_attached_t_cell_morphology_over_time_filename = './plots/{metric}_{group}_all_and_attached_t_cell_morphology_over_time_{task_timestamp}.pdf'
+    base_attached_t_cell_morphology_over_time_filename = './plots/{metric}_attached_t_cell_morphology_over_time_{task_timestamp}.pdf'
+    base_all_t_cell_morphology_over_time_filename = './plots/{metric}_all_t_cell_morphology_over_time_{task_timestamp}.pdf'
+    base_single_and_clumped_cancer_cell_morphology_over_time_filename = './plots/{metric}_{group}_single_and_clumped_cancer_cell_morphology_over_time_{task_timestamp}.pdf'
+    base_single_cancer_cell_morphology_over_time_filename = './plots/{metric}_single_cancer_cell_morphology_over_time_{task_timestamp}.pdf'
+    base_clumped_cancer_cell_morphology_over_time_filename = './plots/{metric}_clumped_cancer_cell_morphology_over_time_{task_timestamp}.pdf'
+    base_single_cancer_cell_morphology_over_time_table_filename = './tables/{metric}_single_cancer_cell_morphology_over_time_{task_timestamp}.csv'
+    base_clumped_cancer_cell_morphology_over_time_table_filename = './tables/{metric}_clumped_cancer_cell_morphology_over_time_{task_timestamp}.csv'
+    base_cancer_cell_morphology_over_time_filename = './plots/{metric}_cancer_cell_morphology_over_time_{task_timestamp}.pdf'
+    base_cancer_individual_clumped_area_ratio_over_time_filename = './plots/single_and_clumped_cancer_cell_area_ratio_over_time_{task_timestamp}.pdf'
+    base_clumped_cancer_cell_morphology_sum_over_time_filename = "./plots/cell_area_sum_clumped_cancer_cell_morphology_over_time_{task_timestamp}.pdf"
     
     base_save_single_cancer_barplots_filename = os.path.expanduser(base_save_single_cancer_barplots_filename)
     base_save_clumped_cancer_barplots_filename = os.path.expanduser(base_save_clumped_cancer_barplots_filename)
@@ -112,7 +90,7 @@ def cell_segmentation_morphology(
         print(f"Processing data for file: {filename}")
         
         print(f"Loading data")
-        dcl_ob = load_data_local(filepath)
+        dcl_ob = load_deepcell_object(filepath)
 
         dcl_y = dcl_ob['y'][:,:,:,0,:]
         cancer_nuc_mask = dcl_y[0,:,:,:]
@@ -186,7 +164,7 @@ def cell_segmentation_morphology(
         how='left', 
         suffixes=('_all', '_attached')
     )
-    save_filename = f'~/Occident-Paper/tables/all_t_cell_and_attached_t_cell_morphology_{task_timestamp}.csv'
+    save_filename = f'./tables/all_t_cell_and_attached_t_cell_morphology_{task_timestamp}.csv'
     save_filename = os.path.expanduser(save_filename)
     final_df.to_csv(save_filename, index=False)
     
@@ -228,7 +206,7 @@ def cell_segmentation_morphology(
         how='left', 
         suffixes=('_single', '_clumped')
     )
-    save_filename = f'~/Occident-Paper/tables/single_and_clumped_cancer_cell_morphology_{task_timestamp}.csv'
+    save_filename = f'./tables/single_and_clumped_cancer_cell_morphology_{task_timestamp}.csv'
     save_filename = os.path.expanduser(save_filename)
     final_df.to_csv(save_filename, index=False)
 
@@ -404,7 +382,7 @@ def cell_segmentation_morphology(
 
 if __name__ == "__main__":
     test = False
-    directory_path = '~/live_cell_imaging_data/cell_tracking_data/240106_donor2_segmentation_results/dcl_samres/'
+    directory_path = '/gladstone/engelhardt/lab/MarsonLabIncucyteData/AnalysisFiles/CarnevaleRepStim/240106_donor2_segmentation_results/dcl_samres/'
     group_logic = {
         "safe_harbor_ko": ["B3", "B4", "B5", "B6"],
         "cul5_ko": ["B7", "B8", "B9", "B10"],

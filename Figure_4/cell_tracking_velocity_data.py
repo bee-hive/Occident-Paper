@@ -1,45 +1,23 @@
 import sys
 import os
-import sys
-import re
-import json
 from typing import Optional
-import socket
 from datetime import datetime
 import pytz
-import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
-import seaborn as sns
-from io import BytesIO
-import itertools
-import math
-import tarfile
-from scipy.ndimage import find_objects
-from scipy.ndimage import label
-from scipy.stats import sem
-from skimage.morphology import square, binary_erosion, binary_dilation
-from skimage.morphology import remove_small_objects
-import skimage as sk
-import zipfile
-import tifffile
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+
+
+from occident.utils import load_deepcell_object
+from occident.velocity import (
+    calculate_velocity_consecutive_frames,
+    transform_velocity_df
+)
 
 pd.set_option('display.max_rows', 50)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
-sys.path.append(os.path.expanduser('~/Occident-Paper'))
-from Figure_4.cell_tracking_helper_functions import(
-    load_data_local,
-    calculate_centroids_for_all_cells,
-    calculate_velocity_consecutive_frames,
-    transform_velocity_df,
-    combine_dataframes,
-    safe_sem,
-)
+sys.path.append(os.path.expanduser('.'))
+
 
 def cell_tracking(
         test: bool,
@@ -74,7 +52,7 @@ def cell_tracking(
         format_filename = filename.replace(".zip", "")
         print(f"\nIteration {current_iteration}/{total_iterations}")
         print(f"Processing data for file: {filename}")
-        dcl_ob = load_data_local(filepath)
+        dcl_ob = load_deepcell_object(filepath)
         dcl_y = dcl_ob['y'][:,:,:,0,:]
         t_cell_array = dcl_y[0,:,:,:]
         cancer_cell_array = dcl_y[1,:,:,:]
@@ -106,7 +84,7 @@ def cell_tracking(
         transformed_cancer_cell_velocity_dict = transform_velocity_df(cancer_cell_velocity_dict, transformed_cancer_cell_velocity_dict, max_velocity_value)
 
     print(f"\nSaving Data")
-    downloads_path = os.path.expanduser(f"{save_data_root_path}/cell_tracking_t_cell_cvs_data_{task_timestamp}")
+    downloads_path = os.path.expanduser(f"{save_data_root_path}/cell_tracking_t_cell_csv_data_{task_timestamp}")
     if not os.path.exists(downloads_path):
         os.makedirs(downloads_path)
         print(f"Directory created at: {downloads_path}")
@@ -132,8 +110,8 @@ def cell_tracking(
 
 if __name__ == "__main__":
     test = False
-    directory_path = '~/live_cell_imaging_data/cell_tracking_data/240422_tracked_BCDE'
-    save_data_root_path = '~/Downloads'
+    directory_path = '/gladstone/engelhardt/lab/MarsonLabIncucyteData/AnalysisFiles/CarnevaleRepStim/updated_full'
+    save_data_root_path = './analysis'
     
     window_size = None
     time_between_frames = 1
