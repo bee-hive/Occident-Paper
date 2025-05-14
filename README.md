@@ -1,6 +1,6 @@
 # Occident-Paper
 
-Code for creating figures from Occident paper "Dynamic phenotyping of CAR T-cell-cancer cell interactions with live-cell imaging and cellular behavior analysis". In particular, this repo contains notebook to generate graphs in Figures 3, 4, and 5. For code for figure 2, see [here](https://github.com/vanvalenlab/Caliban-2024_Schwartz_et_al). 
+Code for creating figures from [Occident paper "Dynamic phenotyping of CAR T-cell-cancer cell interactions with live-cell imaging and cellular behavior analysis"](https://doi.org/10.1101/2024.11.19.624390). In particular, this repo contains notebook to generate graphs in Figures 3, 4, and 5. This repository uses many functions from the occident library https://github.com/bee-hive/occident to perform the underlying analysis. For Figure 2 code, see [here](https://github.com/vanvalenlab/Caliban-2024_Schwartz_et_al). 
 
 ## Data
 
@@ -21,3 +21,4 @@ The following packages are required:
 ## Organization
 
 Each folder contains notebooks to produce the associated figure.
+
